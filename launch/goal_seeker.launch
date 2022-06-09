@@ -1,0 +1,12 @@
+<launch>
+  <arg name="namespace"/>
+
+  <group ns="$(arg namespace)">
+    <!-- <arg name="ar_tag_topic" default="ar_pose_marker"/> -->
+
+    <node name="goal_seeker" pkg="goal_seeker" type="goal_seeker_node" output="screen">
+      <!-- <remap from="target_position" to="$(arg ar_tag_topic)"/> -->
+    </node>
+
+  </group>
+</launch>
