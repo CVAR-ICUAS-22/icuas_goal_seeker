@@ -19,12 +19,12 @@
 #define ODOMETRY_TOPIC "odometry"
 #define CONTROLNODE_SRV "goal_seeker/run"
 #define PI 3.14159265
-#define DISTPOINT_TH 0.2
-#define SEEK_DISTANCE 3.0f
-#define INSPECTION_DISTANCE 4.0f
-#define TAG_POSITION_DIFF 0.005f
-#define X_MAX 12.5f
-#define Y_MAX 7.5f
+// #define DISTPOINT_TH 0.2
+// #define SEEK_DISTANCE 2.5f
+// #define INSPECTION_DISTANCE 4.0f
+// #define TAG_POSITION_DIFF 0.005f
+// #define X_MAX 12.5f
+// #define Y_MAX 7.5f
 
 class GoalSeeker
 {
@@ -51,6 +51,13 @@ public:
   bool tag_pose_received_ = false;
   bool run_node_ = false;
   bool send_goal_position_ = false;
+
+  std::string seek_start_;
+  float inspection_distance_;
+  float inspection_height_;
+  float next_point_reached_dist_;
+  float next_point_reached_yaw_;
+  float end_inspection_tag_position_diff;
 
   float ref_angle_;
   int order_index_;

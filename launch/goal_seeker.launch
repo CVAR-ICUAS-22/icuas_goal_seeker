@@ -1,10 +1,34 @@
 <launch>
-  <arg name="namespace"/>
 
+  <arg name="seek_distance" default="3.0" />
+  <arg name="seek_height" default="2.75" />
+  <arg name="seek_start" default="best" />
+  <arg name="seek_x_max" default="12.5" />
+  <arg name="seek_x_min" default="4.0" />
+  <arg name="seek_y_max" default="7.5" />
+  <arg name="next_point_reached_dist" default="0.5" />
+  <arg name="next_point_reached_yaw" default="0.5" />
+  <arg name="inspection_distance" default="4.0" />
+  <arg name="inspection_height" default="2.0" />
+  <arg name="end_inspection_tag_position_diff" default="0.005" />
+  
+  <arg name="namespace"/>
   <group ns="$(arg namespace)">
     <!-- <arg name="ar_tag_topic" default="ar_pose_marker"/> -->
 
     <node name="goal_seeker" pkg="goal_seeker" type="goal_seeker_node" output="screen">
+      <param name="seek_distance" type="double" value="$(arg seek_distance)" />
+      <param name="seek_height" type="double" value="$(arg seek_height)" />
+      <param name="seek_start" type="str" value="$(arg seek_start)" />
+      <param name="seek_x_max" type="double" value="$(arg seek_x_max)" />
+      <param name="seek_x_min" type="double" value="$(arg seek_x_min)" />
+      <param name="seek_y_max" type="double" value="$(arg seek_y_max)" />
+      <param name="next_point_reached_dist" type="double" value="$(arg next_point_reached_dist)" />
+      <param name="next_point_reached_yaw" type="double" value="$(arg next_point_reached_yaw)" />
+      <param name="inspection_distance" type="double" value="$(arg inspection_distance)" />
+      <param name="inspection_height" type="double" value="$(arg inspection_height)" />
+      <param name="end_inspection_tag_position_diff" type="double" value="$(arg end_inspection_tag_position_diff)" />
+
       <!-- <remap from="target_position" to="$(arg ar_tag_topic)"/> -->
     </node>
 
