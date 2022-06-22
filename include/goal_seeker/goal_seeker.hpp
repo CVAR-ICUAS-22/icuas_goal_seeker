@@ -16,6 +16,7 @@
 #define TAG_POSE_TOPIC "ar_pose_marker"
 #define GOAL_TOPIC "goal_position"
 #define WAYPOINT_TOPIC "position_hold/trajectory"
+#define POSE_TOPIC "motion_reference/pose"
 #define ODOMETRY_TOPIC "odometry"
 #define CONTROLNODE_SRV "goal_seeker/run"
 #define PI 3.14159265
@@ -40,6 +41,7 @@ public:
   ros::NodeHandle nh_;
   ros::Publisher waypoint_pub_;
   ros::Publisher goal_position_pub_;
+  ros::Publisher pose_pub_;
   ros::Subscriber odometry_sub_;
   ros::Subscriber tag_pose_sub_;
   ros::ServiceServer control_node_srv;
@@ -73,6 +75,8 @@ public:
 
 trajectory_msgs::MultiDOFJointTrajectoryPoint generateWaypointMsg(const geometry_msgs::Pose &_poses, const float _yaw);
 geometry_msgs::PoseStamped generateGoalPoseMsg(const Eigen::Vector3d _goal_position);
+geometry_msgs::PoseStamped generatePoseStampedMsg(const geometry_msgs::Pose _waypoint,
+                                                  const float _yaw);
 
 Eigen::Vector3d identifyTagOrientation(const Eigen::Vector3d tag_position_);
 float identifySeekYaw(const Eigen::Vector3d tag_position_);

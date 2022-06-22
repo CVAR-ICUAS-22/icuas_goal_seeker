@@ -5,6 +5,8 @@ GoalSeeker::GoalSeeker()
   odometry_sub_ = nh_.subscribe(ODOMETRY_TOPIC, 1, &GoalSeeker::odometryCallback, this);
   tag_pose_sub_ = nh_.subscribe(TAG_POSE_TOPIC, 1, &GoalSeeker::tagPoseCallback, this);
   waypoint_pub_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>(WAYPOINT_TOPIC, 5);
+  pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(POSE_TOPIC, 1);
+
   goal_position_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(GOAL_TOPIC, 5);
   control_node_srv = nh_.advertiseService(CONTROLNODE_SRV, &GoalSeeker::controlNodeSrv, this);
 
@@ -21,7 +23,7 @@ GoalSeeker::GoalSeeker()
   nh_.getParam("goal_seeker/inspection_distance", inspection_distance_);
   nh_.getParam("goal_seeker/inspection_height", inspection_height_);
   nh_.getParam("goal_seeker/end_inspection_tag_position_diff", end_inspection_tag_position_diff);
-  
+
   ROS_INFO("Seek distance: %.2f", seek_distance);
   ROS_INFO("Seek height: %.2f", seek_height);
   ROS_INFO("Seek start: %s", seek_start_.c_str());
@@ -70,14 +72,14 @@ void GoalSeeker::start()
   ROS_INFO("Node started");
   if (seek_start_ == "best")
   {
-  if (odometry_.pose.pose.position.y > 0)
-  {
-    seek_start_ = "left";
-  }
-  else
-  {
-    seek_start_ = "right";
-  }
+    if (odometry_.pose.pose.position.y > 0)
+    {
+      seek_start_ = "left";
+    }
+    else
+    {
+      seek_start_ = "right";
+    }
   }
 
   if (seek_start_ == "left")
@@ -147,7 +149,9 @@ void GoalSeeker::run()
     else
     {
       ref_angle_ = poses_[order_index_].orientation.w;
-      waypoint_pub_.publish(generateWaypointMsg(poses_[order_index_], ref_angle_));
+      // waypoint_pub_.publish(generateWaypointMsg(poses_[order_index_], ref_angle_));
+      pose_pub_.publish(generatePoseStampedMsg(poses_[order_index_], ref_angle_));
+
       waypoint_sent_ = true;
       ROS_DEBUG("Sending waypoint %f, %f, %f. Angle %f", poses_[order_index_].position.x, poses_[order_index_].position.y, poses_[order_index_].position.z, ref_angle_);
     }
@@ -167,7 +171,8 @@ void GoalSeeker::run()
 
     // ROS_INFO("INSPECTION POINT SENDED");
 
-    waypoint_pub_.publish(generateWaypointMsg(seek_pose_, ref_angle_));
+    // waypoint_pub_.publish(generateWaypointMsg(seek_pose_, ref_angle_));
+    pose_pub_.publish(generatePoseStampedMsg(seek_pose_, ref_angle_));
   }
 }
 
@@ -345,4 +350,22 @@ geometry_msgs::PoseStamped generateGoalPoseMsg(const Eigen::Vector3d _goal_posit
   goal_pose_msg.pose.orientation.z = 0.0f;
   goal_pose_msg.pose.orientation.w = 1.0f;
   return goal_pose_msg;
+}
+
+geometry_msgs::PoseStamped generatePoseStampedMsg(const geometry_msgs::Pose _waypoint,
+                                                  const float _yaw)
+{
+  // convert yaw to quaternion
+  tf2::Quaternion q;
+  q.setRPY(0.0, 0.0, _yaw);
+
+  geometry_msgs::PoseStamped pose_msg;
+  pose_msg.pose.position.x = _waypoint.position.x;
+  pose_msg.pose.position.y = _waypoint.position.y;
+  pose_msg.pose.position.z = _waypoint.position.z;
+  pose_msg.pose.orientation.x = q.x();
+  pose_msg.pose.orientation.y = q.y();
+  pose_msg.pose.orientation.z = q.z();
+  pose_msg.pose.orientation.w = q.w();
+  return pose_msg;
 }
