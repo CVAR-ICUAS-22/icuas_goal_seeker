@@ -41,14 +41,14 @@ GoalSeeker::GoalSeeker()
   float y_position = seek_y_max - seek_distance;
   float x_max = seek_x_max - seek_distance;
 
-  std::array<std::array<float, 4>, 6>
+  std::array<std::array<float, 4>, 8>
       seek_points{{{seek_x_min, y_position, seek_height, M_PI_2},
-                   {x_max, y_position, seek_height, M_PI_2},
+                   //  {x_max, y_position, seek_height, M_PI_2},
+                   {x_max, y_position, seek_height, M_PI_4},
                    {x_max, y_position, seek_height, 0.0},
-                   //  {8.0, 1.5, height, 0.0},
-                   //  {8.0, -1.5, height, 0.0},
                    {x_max, -y_position, seek_height, 0.0},
-                   {x_max, -y_position, seek_height, -M_PI_2},
+                   {x_max, -y_position, seek_height, -M_PI_4},
+                   //  {x_max, -y_position, seek_height, -M_PI_2},
                    {seek_x_min, -y_position, seek_height, -M_PI_2}}};
 
   for (int i = 0; i < seek_points.size(); i++)
@@ -87,8 +87,7 @@ void GoalSeeker::start()
     order_index_ = 0;
     modifier_ = 1;
   }
-
-  if (seek_start_ == "right")
+  else
   {
     order_index_ = poses_.size() - 1;
     modifier_ = -1;
