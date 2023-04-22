@@ -2,11 +2,11 @@
 
   <arg name="seek_distance" default="3.0" />
   <arg name="seek_height" default="2.75" />
-  <arg name="seek_start" default="best" />
+  <arg name="seek_start" default="bottom" />
   <arg name="seek_x_max" default="12.5" />
   <arg name="seek_x_min" default="4.0" />
   <arg name="seek_y_max" default="7.5" />
-  <arg name="next_point_reached_dist" default="0.5" />
+  <arg name="next_point_reached_dist" default="0.3" />
   <arg name="next_point_reached_yaw" default="0.5" />
   <arg name="inspection_distance" default="4.0" />
   <arg name="inspection_height" default="2.0" />

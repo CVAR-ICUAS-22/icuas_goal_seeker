@@ -12,7 +12,9 @@ set(PROJECT_DEPENDENCIES
   geometry_msgs
   trajectory_msgs
   tf2
-  ar_track_alvar_msgs
+  icuas23_competition
+  path_planner
+  # backward_ros
 )
 
 find_package(catkin REQUIRED COMPONENTS

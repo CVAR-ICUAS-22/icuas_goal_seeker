@@ -1,55 +1,98 @@
 #include "goal_seeker.hpp"
+#include "std_msgs/Bool.h"
+#include <cmath>
 
 GoalSeeker::GoalSeeker()
 {
   odometry_sub_ = nh_.subscribe(ODOMETRY_TOPIC, 1, &GoalSeeker::odometryCallback, this);
-  tag_pose_sub_ = nh_.subscribe(TAG_POSE_TOPIC, 1, &GoalSeeker::tagPoseCallback, this);
+  // tag_pose_sub_ = nh_.subscribe(TAG_POSE_TOPIC, 1, &GoalSeeker::tagPoseCallback, this);
   waypoint_pub_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>(WAYPOINT_TOPIC, 5);
   pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(POSE_TOPIC, 1);
+  has_ended_pub_ = nh_.advertise<std_msgs::Bool>(SEEKER_HAS_ENDED_TOPIC, 1);
 
   goal_position_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(GOAL_TOPIC, 5);
   control_node_srv = nh_.advertiseService(CONTROLNODE_SRV, &GoalSeeker::controlNodeSrv, this);
+  set_goal_srv = nh_.advertiseService(SETGOAL_SRV, &GoalSeeker::setGoalSrv, this);
 
   float seek_distance, seek_height, seek_x_max, seek_x_min, seek_y_max;
 
   nh_.getParam("goal_seeker/seek_distance", seek_distance);
   nh_.getParam("goal_seeker/seek_height", seek_height);
   nh_.getParam("goal_seeker/seek_start", seek_start_);
-  nh_.getParam("goal_seeker/seek_x_max", seek_x_max);
-  nh_.getParam("goal_seeker/seek_x_min", seek_x_min);
-  nh_.getParam("goal_seeker/seek_y_max", seek_y_max);
   nh_.getParam("goal_seeker/next_point_reached_dist", next_point_reached_dist_);
   nh_.getParam("goal_seeker/next_point_reached_yaw", next_point_reached_yaw_);
   nh_.getParam("goal_seeker/inspection_distance", inspection_distance_);
   nh_.getParam("goal_seeker/inspection_height", inspection_height_);
-  nh_.getParam("goal_seeker/end_inspection_tag_position_diff", end_inspection_tag_position_diff);
 
-  ROS_INFO("Seek distance: %.2f", seek_distance);
-  ROS_INFO("Seek height: %.2f", seek_height);
-  ROS_INFO("Seek start: %s", seek_start_.c_str());
-  ROS_INFO("Seek x max: %.2f", seek_x_max);
-  ROS_INFO("Seek x min: %.2f", seek_x_min);
-  ROS_INFO("Seek y max: %.2f", seek_y_max);
+  // ROS_INFO("Seek start: %s", seek_start_.c_str());
   ROS_INFO("Next point reached distance: %.2f", next_point_reached_dist_);
   ROS_INFO("Next point reached yaw: %.2f", next_point_reached_yaw_);
   ROS_INFO("Inspection distance: %2f", inspection_distance_);
   ROS_INFO("Inspection height: %.2f", inspection_height_);
-  ROS_INFO("Tag position diff: %.4f", end_inspection_tag_position_diff);
 
   waypoint_sent_ = false;
 
-  float y_position = seek_y_max - seek_distance;
-  float x_max = seek_x_max - seek_distance;
+}
 
-  std::array<std::array<float, 4>, 8>
-      seek_points{{{seek_x_min, y_position, seek_height, M_PI_2},
-                   //  {x_max, y_position, seek_height, M_PI_2},
-                   {x_max, y_position, seek_height, M_PI_4},
-                   {x_max, y_position, seek_height, 0.0},
-                   {x_max, -y_position, seek_height, 0.0},
-                   {x_max, -y_position, seek_height, -M_PI_4},
-                   //  {x_max, -y_position, seek_height, -M_PI_2},
-                   {seek_x_min, -y_position, seek_height, -M_PI_2}}};
+GoalSeeker::~GoalSeeker()
+{
+}
+
+void GoalSeeker::start()
+{
+  ROS_INFO("Node started");
+  // if (seek_start_ == "best")
+  // {
+  //   if (odometry_.pose.pose.position.y > 0)
+  //   {
+  //     seek_start_ = "left";
+  //   }
+  //   else
+  //   {
+  //     seek_start_ = "right";
+  //   }
+  // }
+
+  if (seek_start_ == "top")
+  {
+    ROS_INFO("Seek start: DOWNWARDS");
+    order_index_ = 0;
+    modifier_ = 1;
+  }
+  else
+  {
+    ROS_INFO("Seek start: UPWARDS");
+    order_index_ = poses_.size() - 1;
+    modifier_ = -1;
+  }
+
+  // ROS_DEBUG("Starting index: %s", seek_start_.c_str());
+  // modifier_ = 1;
+  // order_index_ = 0;
+
+  // Generate searching waypoints 
+  std::array<std::array<float, 4>, 40>
+      seek_points;
+  
+  std::array<double, 4> initial_pose{{poi_.x, poi_.y, poi_.z + searching_area_height_}};
+  float height_step = searching_area_height_ / (seek_points.size() - 1);
+  float yaw_step = M_PI_4;
+  float yaw = 0.0;
+  float max_yaw = 1.9*M_PI;
+
+  for (int i=0; i < seek_points.size(); i++)
+  {
+    seek_points[i][0] = poi_.x;
+    seek_points[i][1] = poi_.y;
+    seek_points[i][2] = initial_pose[2] - i*height_step;
+    yaw = yaw + yaw_step;
+    if (yaw > max_yaw) {
+      yaw = 0.0;
+    }
+    seek_points[i][3] = yaw;
+
+    // std::cout << seek_points[i][0] << " " << seek_points[i][1] << " " << seek_points[i][2] << " " << seek_points[i][3] << std::endl;
+  }
 
   for (int i = 0; i < seek_points.size(); i++)
   {
@@ -61,39 +104,6 @@ GoalSeeker::GoalSeeker()
     // poses_[i].orientation.z = seek_points[i][5];
     poses_[i].orientation.w = seek_points[i][3]; // YAW
   }
-}
-
-GoalSeeker::~GoalSeeker()
-{
-}
-
-void GoalSeeker::start()
-{
-  ROS_INFO("Node started");
-  if (seek_start_ == "best")
-  {
-    if (odometry_.pose.pose.position.y > 0)
-    {
-      seek_start_ = "left";
-    }
-    else
-    {
-      seek_start_ = "right";
-    }
-  }
-
-  if (seek_start_ == "left")
-  {
-    order_index_ = 0;
-    modifier_ = 1;
-  }
-  else
-  {
-    order_index_ = poses_.size() - 1;
-    modifier_ = -1;
-  }
-
-  ROS_DEBUG("Starting index: %s", seek_start_.c_str());
 
   run_node_ = true;
 }
@@ -106,18 +116,9 @@ void GoalSeeker::stop()
 
 void GoalSeeker::run()
 {
-  const float height = 2.0;
-
   if (!run_node_)
   {
     return;
-  }
-
-  if (send_goal_position_)
-  {
-    goal_position_pub_.publish(generateGoalPoseMsg(tag_position_));
-    ROS_INFO("Goal position: %f, %f, %f", tag_position_.x(), tag_position_.y(), tag_position_.z());
-    // send_goal_position_ = false;
   }
 
   if (!odometry_received_)
@@ -138,9 +139,18 @@ void GoalSeeker::run()
         {
           waypoint_sent_ = false;
           order_index_ += modifier_;
+          // Continue searching backwards
+          // if (order_index_ == (poses_.size() - 1) || order_index_ == 0)
+          // {
+          //   modifier_ *= -1;
+          // }
+          // Finish searching backwards
+          // if (order_index_ == 0) {
+          // Finish searching forwards
+          // if (order_index_ == (poses_.size() - 1)) {
           if (order_index_ == (poses_.size() - 1) || order_index_ == 0)
           {
-            modifier_ *= -1;
+              endSearch();
           }
         }
       }
@@ -148,31 +158,33 @@ void GoalSeeker::run()
     else
     {
       ref_angle_ = poses_[order_index_].orientation.w;
-      // waypoint_pub_.publish(generateWaypointMsg(poses_[order_index_], ref_angle_));
-      pose_pub_.publish(generatePoseStampedMsg(poses_[order_index_], ref_angle_));
-
+      // ROS_INFO("Sending waypoint %f, %f, %f. Angle %f", poses_[order_index_].position.x, poses_[order_index_].position.y, poses_[order_index_].position.z, ref_angle_);
+      auto msg = generateWaypointMsg(poses_[order_index_], ref_angle_);
+      waypoint_pub_.publish(msg);
+      // pose_pub_.publish(generatePoseStampedMsg(poses_[order_index_], ref_angle_));
       waypoint_sent_ = true;
-      ROS_DEBUG("Sending waypoint %f, %f, %f. Angle %f", poses_[order_index_].position.x, poses_[order_index_].position.y, poses_[order_index_].position.z, ref_angle_);
     }
   }
 
+  // Check final condition and send has_ended
+
   // INSPECTION
-  if (tag_pose_received_)
-  {
-    geometry_msgs::Pose seek_pose_;
-    Eigen::Vector3d seek_vector = identifyTagOrientation(tag_position_);
-    float inspection_distance = inspection_distance_; // in meters
-    seek_pose_.position.x = tag_position_.x() + seek_vector.x() * inspection_distance;
-    seek_pose_.position.y = tag_position_.y() + seek_vector.y() * inspection_distance;
-    seek_pose_.position.z = tag_position_.z() + inspection_height_;
+  // if (tag_pose_received_)
+  // {
+  //   geometry_msgs::Pose seek_pose_;
+  //   Eigen::Vector3d seek_vector = identifyTagOrientation(tag_position_);
+  //   float inspection_distance = inspection_distance_; // in meters
+  //   seek_pose_.position.x = tag_position_.x() + seek_vector.x() * inspection_distance;
+  //   seek_pose_.position.y = tag_position_.y() + seek_vector.y() * inspection_distance;
+  //   seek_pose_.position.z = tag_position_.z() + inspection_height_;
 
-    ref_angle_ = identifySeekYaw(tag_position_);
+  //   ref_angle_ = identifySeekYaw(tag_position_);
 
-    // ROS_INFO("INSPECTION POINT SENDED");
+  //   // ROS_INFO("INSPECTION POINT SENDED");
 
-    // waypoint_pub_.publish(generateWaypointMsg(seek_pose_, ref_angle_));
-    pose_pub_.publish(generatePoseStampedMsg(seek_pose_, ref_angle_));
-  }
+  //   // waypoint_pub_.publish(generateWaypointMsg(seek_pose_, ref_angle_));
+  //   pose_pub_.publish(generatePoseStampedMsg(seek_pose_, ref_angle_));
+  // }
 }
 
 bool GoalSeeker::checkOrientationReached(const float _angle)
@@ -181,8 +193,14 @@ bool GoalSeeker::checkOrientationReached(const float _angle)
   tf2::Matrix3x3 m(q);
   double roll, pitch, yaw;
   m.getRPY(roll, pitch, yaw);
+  if (yaw < 0){
+    yaw = 2*M_PI + yaw;
+  }
+  if (yaw > 1.9*M_PI){
+    yaw = yaw - 2*M_PI;
+  }
 
-  if (fabs(_angle - yaw) < 0.5)
+  if (fabs(_angle - yaw) < next_point_reached_yaw_)
   {
     return true;
   }
@@ -219,6 +237,44 @@ void GoalSeeker::odometryCallback(const nav_msgs::Odometry::ConstPtr &_msg)
   odometry_ = *_msg;
 }
 
+void GoalSeeker::endSearch()
+{
+  std_msgs::Bool msg;
+  msg.data = target_found_;
+  has_ended_pub_.publish(msg);
+  run_node_ = false;
+  ROS_INFO("Node_stopped");
+}
+
+bool GoalSeeker::setGoalSrv(path_planner::setGoalPoint::Request &_request,
+                            path_planner::setGoalPoint::Response &_response) {
+  std::cout << "Service called" << std::endl;
+  if (run_node_) {
+    _response.success = false;
+    _response.message = "Node already running";
+    ROS_WARN("Node already running");
+    return false;
+  }
+
+  // Check initial distance
+  // float distance = 
+
+  poi_ = _request.goal.point;
+
+  ROS_INFO("POI: %f, %f, %f", poi_.x, poi_.y, poi_.z);
+
+  _response.success = true;
+  _response.message =
+      "POI set to: " + std::to_string(poi_.x) + ", " +
+      std::to_string(poi_.y) + ", " + std::to_string(poi_.z);
+
+  start();
+
+  return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
 trajectory_msgs::MultiDOFJointTrajectoryPoint generateWaypointMsg(const geometry_msgs::Pose &_poses, const float _yaw)
 {
   // convert yaw to quaternion
@@ -244,96 +300,6 @@ trajectory_msgs::MultiDOFJointTrajectoryPoint generateWaypointMsg(const geometry
   // trajectory_point.accelerations[0].z = 0;
   trajectory_point.time_from_start = ros::Duration(0.1);
   return trajectory_point;
-}
-
-void GoalSeeker::tagPoseCallback(const ar_track_alvar_msgs::AlvarMarkers::ConstPtr &_msg)
-{
-  if (_msg->markers.size() == 0)
-  {
-    return;
-  }
-
-  if (!run_node_)
-  {
-    return;
-  }
-
-  if (send_goal_position_)
-    return;
-
-  Eigen::Vector3d new_tag_position;
-  new_tag_position[0] = _msg->markers[0].pose.pose.position.x;
-  new_tag_position[1] = _msg->markers[0].pose.pose.position.y;
-  new_tag_position[2] = _msg->markers[0].pose.pose.position.z;
-
-  send_goal_position_ = filterTagPosition(new_tag_position);
-
-  // ROS_INFO("TAG POSITION RECEIVED");
-
-  tag_pose_received_ = true;
-}
-
-bool GoalSeeker::filterTagPosition(const Eigen::Vector3d &_tag_position)
-{
-  Eigen::Vector3d tag_position_diff = _tag_position - tag_position_;
-  // ROS_INFO("TAG POSITION DIFF: %f, %f, %f", tag_position_diff[0], tag_position_diff[1], tag_position_diff[2]);
-  ROS_INFO("TAG POSITION DIFF MAG: %f", tag_position_diff.norm());
-  if (tag_position_diff.norm() > end_inspection_tag_position_diff)
-  {
-    tag_position_ = _tag_position;
-    return false;
-  }
-  return true;
-}
-
-Eigen::Vector3d identifyTagOrientation(const Eigen::Vector3d tag_position_)
-{
-  float x_max = 12.5f;
-  float y_min = 7.5f;
-  float confidence = 0.5f;
-
-  if (tag_position_.x() > (x_max - confidence))
-  {
-    return Eigen::Vector3d(-1, 0, 0);
-  }
-  else if (abs(tag_position_.y()) < (y_min - confidence))
-  {
-    return Eigen::Vector3d(-1, 0, 0);
-  }
-
-  if (tag_position_.y() > 0)
-  {
-    return Eigen::Vector3d(0, -1, 0);
-  }
-  else
-  {
-    return Eigen::Vector3d(0, 1, 0);
-  }
-}
-
-float identifySeekYaw(const Eigen::Vector3d tag_position_)
-{
-  float x_max = 12.5f;
-  float y_min = 7.5f;
-  float confidence = 0.5f;
-
-  if (tag_position_.x() > (x_max - confidence))
-  {
-    return 0.0f;
-  }
-  else if (abs(tag_position_.y()) < (y_min - confidence))
-  {
-    return 0.0f;
-  }
-
-  if (tag_position_.y() > 0)
-  {
-    return M_PI_2;
-  }
-  else
-  {
-    return -M_PI_2;
-  }
 }
 
 geometry_msgs::PoseStamped generateGoalPoseMsg(const Eigen::Vector3d _goal_position)
