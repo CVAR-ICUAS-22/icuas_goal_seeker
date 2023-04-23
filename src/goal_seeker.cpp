@@ -1,6 +1,4 @@
 #include "goal_seeker.hpp"
-#include "std_msgs/Bool.h"
-#include <cmath>
 
 GoalSeeker::GoalSeeker()
 {
@@ -243,7 +241,7 @@ void GoalSeeker::endSearch()
   msg.data = target_found_;
   has_ended_pub_.publish(msg);
   run_node_ = false;
-  ROS_INFO("Node_stopped");
+  ROS_INFO("End search");
 }
 
 bool GoalSeeker::setGoalSrv(path_planner::setGoalPoint::Request &_request,

@@ -12,6 +12,7 @@
 #include <path_planner/setGoalPoint.h>
 // #include "ar_track_alvar_msgs/AlvarMarkers.h"
 #include <std_msgs/Bool.h>
+#include <cmath>
 
 #include <Eigen/Dense>
 #include <array>
