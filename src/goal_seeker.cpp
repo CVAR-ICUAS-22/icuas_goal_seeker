@@ -104,6 +104,7 @@ void GoalSeeker::start()
   }
 
   run_node_ = true;
+  waypoint_sent_ = false;
 }
 
 void GoalSeeker::stop()
@@ -209,6 +210,7 @@ bool GoalSeeker::controlNodeSrv(std_srvs::SetBool::Request &_request, std_srvs::
 {
   if (run_node_ == _request.data)
   {
+    ROS_INFO("Control Node: ALREADY RUNNING");
     _response.success = false;
     _response.message = "Run node already set to " + std::to_string(run_node_);
     return true;
@@ -219,10 +221,12 @@ bool GoalSeeker::controlNodeSrv(std_srvs::SetBool::Request &_request, std_srvs::
 
   if (_request.data)
   {
+    ROS_INFO("Control Node: RUN");
     start();
   }
   else
   {
+    ROS_INFO("Control Node: STOP");
     stop();
   }
 
@@ -240,13 +244,13 @@ void GoalSeeker::endSearch()
   std_msgs::Bool msg;
   msg.data = target_found_;
   has_ended_pub_.publish(msg);
-  run_node_ = false;
+  // run_node_ = false;
   ROS_INFO("End search");
 }
 
 bool GoalSeeker::setGoalSrv(path_planner::setGoalPoint::Request &_request,
                             path_planner::setGoalPoint::Response &_response) {
-  std::cout << "Service called" << std::endl;
+  // std::cout << "Service called" << std::endl;
   if (run_node_) {
     _response.success = false;
     _response.message = "Node already running";
