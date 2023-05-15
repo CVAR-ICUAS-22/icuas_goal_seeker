@@ -3,9 +3,6 @@
   <arg name="seek_distance" default="3.0" />
   <arg name="seek_height" default="2.75" />
   <arg name="seek_start" default="bottom" />
-  <arg name="seek_x_max" default="12.5" />
-  <arg name="seek_x_min" default="4.0" />
-  <arg name="seek_y_max" default="7.5" />
   <arg name="next_point_reached_dist" default="0.2" />
   <arg name="next_point_reached_yaw" default="0.3" />
   <arg name="inspection_distance" default="4.0" />
@@ -20,9 +17,6 @@
       <param name="seek_distance" type="double" value="$(arg seek_distance)" />
       <param name="seek_height" type="double" value="$(arg seek_height)" />
       <param name="seek_start" type="str" value="$(arg seek_start)" />
-      <param name="seek_x_max" type="double" value="$(arg seek_x_max)" />
-      <param name="seek_x_min" type="double" value="$(arg seek_x_min)" />
-      <param name="seek_y_max" type="double" value="$(arg seek_y_max)" />
       <param name="next_point_reached_dist" type="double" value="$(arg next_point_reached_dist)" />
       <param name="next_point_reached_yaw" type="double" value="$(arg next_point_reached_yaw)" />
       <param name="inspection_distance" type="double" value="$(arg inspection_distance)" />

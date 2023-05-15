@@ -19,14 +19,16 @@ GoalSeeker::GoalSeeker()
   nh_.getParam("goal_seeker/seek_start", seek_start_);
   nh_.getParam("goal_seeker/next_point_reached_dist", next_point_reached_dist_);
   nh_.getParam("goal_seeker/next_point_reached_yaw", next_point_reached_yaw_);
-  nh_.getParam("goal_seeker/inspection_distance", inspection_distance_);
-  nh_.getParam("goal_seeker/inspection_height", inspection_height_);
+  // nh_.getParam("goal_seeker/inspection_distance", inspection_distance_);
+  // nh_.getParam("goal_seeker/inspection_height", inspection_height_);
 
-  // ROS_INFO("Seek start: %s", seek_start_.c_str());
+  ROS_INFO("Seek distance: %.2f", seek_distance);
+  ROS_INFO("Seek height: %.2f", seek_height);
+  ROS_INFO("Seek start: %s", seek_start_.c_str());
   ROS_INFO("Next point reached distance: %.2f", next_point_reached_dist_);
   ROS_INFO("Next point reached yaw: %.2f", next_point_reached_yaw_);
-  ROS_INFO("Inspection distance: %2f", inspection_distance_);
-  ROS_INFO("Inspection height: %.2f", inspection_height_);
+  // ROS_INFO("Inspection distance: %2f", inspection_distance_);
+  // ROS_INFO("Inspection height: %.2f", inspection_height_);
 
   waypoint_sent_ = false;
 
