@@ -12,18 +12,18 @@ GoalSeeker::GoalSeeker()
   control_node_srv = nh_.advertiseService(CONTROLNODE_SRV, &GoalSeeker::controlNodeSrv, this);
   set_goal_srv = nh_.advertiseService(SETGOAL_SRV, &GoalSeeker::setGoalSrv, this);
 
-  float seek_distance, seek_height, seek_x_max, seek_x_min, seek_y_max;
+  // float search_radious, search_height;
 
-  nh_.getParam("goal_seeker/seek_distance", seek_distance);
-  nh_.getParam("goal_seeker/seek_height", seek_height);
+  nh_.getParam("goal_seeker/search_radious", search_area_radious_);
+  nh_.getParam("goal_seeker/search_height", search_area_height_);
   nh_.getParam("goal_seeker/seek_start", seek_start_);
   nh_.getParam("goal_seeker/next_point_reached_dist", next_point_reached_dist_);
   nh_.getParam("goal_seeker/next_point_reached_yaw", next_point_reached_yaw_);
   // nh_.getParam("goal_seeker/inspection_distance", inspection_distance_);
   // nh_.getParam("goal_seeker/inspection_height", inspection_height_);
 
-  ROS_INFO("Seek distance: %.2f", seek_distance);
-  ROS_INFO("Seek height: %.2f", seek_height);
+  ROS_INFO("Search radious: %.2f", search_area_radious_);
+  ROS_INFO("Search height: %.2f", search_area_height_);
   ROS_INFO("Seek start: %s", seek_start_.c_str());
   ROS_INFO("Next point reached distance: %.2f", next_point_reached_dist_);
   ROS_INFO("Next point reached yaw: %.2f", next_point_reached_yaw_);
@@ -74,8 +74,8 @@ void GoalSeeker::start()
   std::array<std::array<float, 4>, 40>
       seek_points;
   
-  std::array<double, 4> initial_pose{{poi_.x, poi_.y, poi_.z + searching_area_height_}};
-  float height_step = searching_area_height_ / (seek_points.size() - 1);
+  std::array<double, 4> initial_pose{{poi_.x, poi_.y, poi_.z + search_area_height_}};
+  float height_step = search_area_height_ / (seek_points.size() - 1);
   float yaw_step = M_PI_4;
   float yaw = 0.0;
   float max_yaw = 1.9*M_PI;

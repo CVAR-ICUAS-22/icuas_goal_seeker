@@ -72,8 +72,8 @@ public:
   float next_point_reached_yaw_;
   float end_inspection_tag_position_diff;
 
-  float searching_area_height_ = 5.0;
-  float searching_area_radious_ = 2.5;
+  float search_area_height_ = 5.0;
+  float search_area_radious_ = 2.5;
   geometry_msgs::Point poi_;
 
   float ref_angle_;

@@ -1,7 +1,7 @@
 <launch>
 
-  <arg name="seek_distance" default="3.0" />
-  <arg name="seek_height" default="2.75" />
+  <arg name="search_radious" default="2.5" />
+  <arg name="search_height" default="5.0" />
   <arg name="seek_start" default="bottom" />
   <arg name="next_point_reached_dist" default="0.2" />
   <arg name="next_point_reached_yaw" default="0.3" />
@@ -14,8 +14,8 @@
     <!-- <arg name="ar_tag_topic" default="ar_pose_marker"/> -->
 
     <node name="goal_seeker" pkg="goal_seeker" type="goal_seeker_node" output="screen">
-      <param name="seek_distance" type="double" value="$(arg seek_distance)" />
-      <param name="seek_height" type="double" value="$(arg seek_height)" />
+      <param name="search_radious" type="double" value="$(arg search_radious)" />
+      <param name="search_height" type="double" value="$(arg search_height)" />
       <param name="seek_start" type="str" value="$(arg seek_start)" />
       <param name="next_point_reached_dist" type="double" value="$(arg next_point_reached_dist)" />
       <param name="next_point_reached_yaw" type="double" value="$(arg next_point_reached_yaw)" />
