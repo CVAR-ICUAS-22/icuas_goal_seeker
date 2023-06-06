@@ -11,6 +11,8 @@ set(PROJECT_DEPENDENCIES
   sensor_msgs
   geometry_msgs
   trajectory_msgs
+  image_transport
+  cv_bridge
   tf2
   icuas23_competition
   path_planner
@@ -21,7 +23,8 @@ find_package(catkin REQUIRED COMPONENTS
   ${PROJECT_DEPENDENCIES}
 )
 
-find_package(Eigen3)
+find_package(Eigen3 REQUIRED)
+find_package(OpenCV REQUIRED)
 
 set(SOURCE_FILES
   src/goal_seeker.cpp
@@ -42,7 +45,7 @@ include_directories(
 
 add_executable(${PROJECT_NAME}_node src/goal_seeker_node.cpp ${SOURCE_FILES})
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 # install(DIRECTORY include/${PROJECT_NAME}/
 #   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}

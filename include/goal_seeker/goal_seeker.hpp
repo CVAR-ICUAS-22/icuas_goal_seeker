@@ -1,25 +1,31 @@
 #ifndef GOAL_SEEKER_HPP_
 #define GOAL_SEEKER_HPP_
 
-#include "geometry_msgs/Point.h"
+#include <ros/ros.h>
+#include <image_transport/image_transport.h>
+#include <opencv2/opencv.hpp>
+#include <cv_bridge/cv_bridge.h>
+
 #include "ros/publisher.h"
 #include "ros/service_server.h"
-#include <ros/ros.h>
-#include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
-#include <nav_msgs/Odometry.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <std_srvs/SetBool.h>
-#include <path_planner/setGoalPoint.h>
-// #include "ar_track_alvar_msgs/AlvarMarkers.h"
+#include "image_transport/subscriber.h"
+#include <opencv2/core/types.hpp>
+
 #include <std_msgs/Bool.h>
-#include <cmath>
+#include <std_srvs/SetBool.h>
+#include <nav_msgs/Odometry.h>
+#include "sensor_msgs/Image.h"
+#include "geometry_msgs/Point.h"
+#include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <path_planner/setGoalPoint.h>
 
 #include <Eigen/Dense>
+#include <cmath>
 #include <array>
 #include <thread>
 #include <chrono>
 
-// #define TAG_POSE_TOPIC "ar_pose_marker"
 #define GOAL_TOPIC "goal_position"
 #define WAYPOINT_TOPIC "position_hold/trajectory"
 #define POSE_TOPIC "motion_reference/pose"
@@ -27,14 +33,8 @@
 #define CONTROLNODE_SRV "goal_seeker/run"
 #define SETGOAL_SRV "goal_seeker/set_goal"
 #define SEEKER_HAS_ENDED_TOPIC "goal_seeker/has_ended"
-
+#define MAP_TOPIC "ego_map"
 #define PI 3.14159265
-// #define DISTPOINT_TH 0.2
-// #define SEEK_DISTANCE 2.5f
-// #define INSPECTION_DISTANCE 4.0f
-// #define TAG_POSITION_DIFF 0.005f
-// #define X_MAX 12.5f
-// #define Y_MAX 7.5f
 
 class GoalSeeker
 {
@@ -53,11 +53,16 @@ public:
   ros::Publisher pose_pub_;
   ros::Subscriber odometry_sub_;
   ros::Subscriber tag_pose_sub_;
-  ros::ServiceServer control_node_srv;
-  ros::ServiceServer set_goal_srv;
+  ros::ServiceServer control_node_srv_;
+  ros::ServiceServer set_goal_srv_;
   ros::Publisher has_ended_pub_;
 
+  image_transport::ImageTransport it_;
+  image_transport::Subscriber map_sub_;
+
   nav_msgs::Odometry odometry_;
+  geometry_msgs::Point poi_;
+  cv::Mat map_;
 
   bool waypoint_sent_ = false;
   bool odometry_received_ = false;
@@ -74,7 +79,6 @@ public:
 
   float search_area_height_ = 5.0;
   float search_area_radious_ = 2.5;
-  geometry_msgs::Point poi_;
 
   float ref_angle_;
   int order_index_;
@@ -90,6 +94,10 @@ public:
   bool setGoalSrv(path_planner::setGoalPoint::Request &_request,
                   path_planner::setGoalPoint::Response &_response);
   void endSearch();
+  void mapCallback(const sensor_msgs::ImageConstPtr &_map);
+  bool cellIsOccupied(const cv::Point2i &_cell);
+  bool findYawOfInterest(float &_yoi);
+  float calculateYaw(cv::Point2i &_cell, cv::Point2i &_center);
 };
 
 trajectory_msgs::MultiDOFJointTrajectoryPoint generateWaypointMsg(const geometry_msgs::Pose &_poses, const float _yaw);

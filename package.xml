@@ -17,6 +17,8 @@
   <depend>tf2</depend>
   <depend>path_planner</depend>
   <depend>icuas23_competition</depend>
+  <depend>image_transport</depend>
+  <depend>cv_bridge</depend>
   <!-- <depend>backward_ros</depend> -->
   
 </package>

@@ -1,16 +1,18 @@
 #include "goal_seeker.hpp"
+#include <cstddef>
 
-GoalSeeker::GoalSeeker()
+GoalSeeker::GoalSeeker() : it_(nh_)
 {
   odometry_sub_ = nh_.subscribe(ODOMETRY_TOPIC, 1, &GoalSeeker::odometryCallback, this);
+  map_sub_ = it_.subscribe(MAP_TOPIC, 1, &GoalSeeker::mapCallback, this);
   // tag_pose_sub_ = nh_.subscribe(TAG_POSE_TOPIC, 1, &GoalSeeker::tagPoseCallback, this);
   waypoint_pub_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>(WAYPOINT_TOPIC, 5);
   pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(POSE_TOPIC, 1);
   has_ended_pub_ = nh_.advertise<std_msgs::Bool>(SEEKER_HAS_ENDED_TOPIC, 1);
 
   goal_position_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(GOAL_TOPIC, 5);
-  control_node_srv = nh_.advertiseService(CONTROLNODE_SRV, &GoalSeeker::controlNodeSrv, this);
-  set_goal_srv = nh_.advertiseService(SETGOAL_SRV, &GoalSeeker::setGoalSrv, this);
+  control_node_srv_ = nh_.advertiseService(CONTROLNODE_SRV, &GoalSeeker::controlNodeSrv, this);
+  set_goal_srv_ = nh_.advertiseService(SETGOAL_SRV, &GoalSeeker::setGoalSrv, this);
 
   // float search_radious, search_height;
 
@@ -115,6 +117,15 @@ void GoalSeeker::stop()
   ROS_INFO("Node stopped");
 }
 
+void GoalSeeker::endSearch()
+{
+  std_msgs::Bool msg;
+  msg.data = target_found_;
+  has_ended_pub_.publish(msg);
+  // run_node_ = false;
+  ROS_INFO("End search");
+}
+
 void GoalSeeker::run()
 {
   if (!run_node_)
@@ -133,7 +144,10 @@ void GoalSeeker::run()
   {
     if (waypoint_sent_)
     {
-      double distance = sqrt(pow(poses_[order_index_].position.x - odometry_.pose.pose.position.x, 2) + pow(poses_[order_index_].position.y - odometry_.pose.pose.position.y, 2));
+      // double distance = sqrt(pow(poses_[order_index_].position.x - odometry_.pose.pose.position.x, 2) + pow(poses_[order_index_].position.y - odometry_.pose.pose.position.y, 2));
+      double distance = sqrt(pow(poses_[order_index_].position.x - odometry_.pose.pose.position.x, 2) +
+                             pow(poses_[order_index_].position.y - odometry_.pose.pose.position.y, 2) +
+                             pow(poses_[order_index_].position.z - odometry_.pose.pose.position.z, 2));
       if (distance < next_point_reached_dist_)
       {
         if (checkOrientationReached(ref_angle_))
@@ -159,6 +173,10 @@ void GoalSeeker::run()
     else
     {
       ref_angle_ = poses_[order_index_].orientation.w;
+      float yaw = 0.0;
+      if (findYawOfInterest(yaw)){
+        ref_angle_ = yaw;
+      }
       // ROS_INFO("Sending waypoint %f, %f, %f. Angle %f", poses_[order_index_].position.x, poses_[order_index_].position.y, poses_[order_index_].position.z, ref_angle_);
       auto msg = generateWaypointMsg(poses_[order_index_], ref_angle_);
       waypoint_pub_.publish(msg);
@@ -235,24 +253,106 @@ bool GoalSeeker::controlNodeSrv(std_srvs::SetBool::Request &_request, std_srvs::
   return true;
 }
 
+bool GoalSeeker::findYawOfInterest(float &_yoi)
+{
+  cv::Point2i center_cell(0,0);
+  int max_radious = 0;
+  try {
+    cv::Size map_size = map_.size();
+    max_radious = std::min(map_size.height, map_size.width);
+    center_cell.x = map_size.height / 2;
+    center_cell.y = map_size.width / 2;
+  }
+  catch (...) {
+    ROS_WARN("Map not received");
+  }
+
+  if (max_radious < 1) {
+    return false;
+  } 
+  
+  // if map empty (or almost empty)
+  // return None
+
+  cv::Point2i nearest_cell = center_cell;
+  cv::Point2i cell = center_cell;
+  bool cell_found = false;
+
+  // FIX: MAKE CIRCLES
+  for (int radious=1; radious < max_radious; radious++){
+    int min_distance = max_radious*2;
+    for (int i = -radious; i <= radious; i++)
+    {
+      for (int j = -radious; j <= radious; j++)
+      {
+        cell.x = center_cell.x + i;
+        cell.y = center_cell.y + j;
+        if (cellIsOccupied(cell))
+        {
+          int distance = abs(i) + abs(j);
+          if (distance < min_distance) {
+            min_distance = distance;
+            nearest_cell = cell;
+            cell_found = true;
+          }
+        }
+      }
+    }
+    if (cell_found) {
+      _yoi = calculateYaw(nearest_cell, center_cell);
+      return true;
+    }
+  }
+  return false;
+}
+
+float GoalSeeker::calculateYaw(cv::Point2i &_cell, cv::Point2i &_center)
+{
+  cv::Size map_size = map_.size();
+  cv::Point2i cell_0(map_size.height / 2, map_size.width);
+
+  float yaw_i = atan2(_cell.y - _center.y, _cell.x - _center.x);
+  float yaw_0 = atan2(cell_0.y - _center.y, cell_0.x - _center.x);
+  float yaw = (atan2(_cell.y - _center.y, _cell.x - _center.x) - atan2(cell_0.y - _center.y, cell_0.x - _center.x));
+
+  if (yaw < 0){
+    yaw = 2*M_PI + yaw;
+  }
+  return yaw;
+}
+
+bool GoalSeeker::cellIsOccupied(const cv::Point2i &_cell)
+{
+  // if (cell==0)
+  //   Check is alone
+  return map_.at<uchar>(_cell.x, _cell.y) == 0;
+}
+
+// CALLBACKS
 void GoalSeeker::odometryCallback(const nav_msgs::Odometry::ConstPtr &_msg)
 {
   odometry_received_ = true;
   odometry_ = *_msg;
 }
 
-void GoalSeeker::endSearch()
+void GoalSeeker::mapCallback(const sensor_msgs::ImageConstPtr &_map)
 {
-  std_msgs::Bool msg;
-  msg.data = target_found_;
-  has_ended_pub_.publish(msg);
-  // run_node_ = false;
-  ROS_INFO("End search");
+  cv_bridge::CvImagePtr cv_ptr;
+  try
+  {
+    cv_ptr = cv_bridge::toCvCopy(_map, sensor_msgs::image_encodings::TYPE_8UC1);
+    map_ = cv_ptr->image;
+  }
+  catch (cv_bridge::Exception &e)
+  {
+    ROS_ERROR("cv_bridge exception: %s", e.what());
+  }
 }
 
+// SERVERS
 bool GoalSeeker::setGoalSrv(path_planner::setGoalPoint::Request &_request,
                             path_planner::setGoalPoint::Response &_response) {
-  // std::cout << "Service called" << std::endl;
+  
   if (run_node_) {
     _response.success = false;
     _response.message = "Node already running";
