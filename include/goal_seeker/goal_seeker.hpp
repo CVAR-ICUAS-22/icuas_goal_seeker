@@ -33,8 +33,10 @@
 #define CONTROLNODE_SRV "goal_seeker/run"
 #define SETGOAL_SRV "goal_seeker/set_goal"
 #define SEEKER_HAS_ENDED_TOPIC "goal_seeker/has_ended"
+#define RUN_DETECTION_TOPIC "/crack_detector/run"
 #define MAP_TOPIC "ego_map"
 #define PI 3.14159265
+#define N_POSES 8
 
 class GoalSeeker
 {
@@ -45,12 +47,13 @@ public:
   void start();
   void stop();
 
-  std::array<geometry_msgs::Pose, 40> poses_;
+  std::array<geometry_msgs::Pose, N_POSES> poses_;
 
   ros::NodeHandle nh_;
   ros::Publisher waypoint_pub_;
   ros::Publisher goal_position_pub_;
   ros::Publisher pose_pub_;
+  ros::Publisher run_detection_pub_;
   ros::Subscriber odometry_sub_;
   ros::Subscriber tag_pose_sub_;
   ros::ServiceServer control_node_srv_;

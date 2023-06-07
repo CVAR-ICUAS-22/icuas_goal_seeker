@@ -1,4 +1,5 @@
 #include "goal_seeker.hpp"
+#include <algorithm>
 #include <cstddef>
 
 GoalSeeker::GoalSeeker() : it_(nh_)
@@ -9,6 +10,7 @@ GoalSeeker::GoalSeeker() : it_(nh_)
   waypoint_pub_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>(WAYPOINT_TOPIC, 5);
   pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(POSE_TOPIC, 1);
   has_ended_pub_ = nh_.advertise<std_msgs::Bool>(SEEKER_HAS_ENDED_TOPIC, 1);
+  run_detection_pub_= nh_.advertise<std_msgs::Bool>(RUN_DETECTION_TOPIC, 1);
 
   goal_position_pub_ = nh_.advertise<geometry_msgs::PoseStamped>(GOAL_TOPIC, 5);
   control_node_srv_ = nh_.advertiseService(CONTROLNODE_SRV, &GoalSeeker::controlNodeSrv, this);
@@ -73,11 +75,12 @@ void GoalSeeker::start()
   // order_index_ = 0;
 
   // Generate searching waypoints 
-  std::array<std::array<float, 4>, 40>
-      seek_points;
+  std::array<std::array<float, 4>, N_POSES> seek_points;
   
-  std::array<double, 4> initial_pose{{poi_.x, poi_.y, poi_.z + search_area_height_}};
-  float height_step = search_area_height_ / (seek_points.size() - 1);
+  // std::array<double, 4> initial_pose{{poi_.x, poi_.y, poi_.z + search_area_height_}};
+  // std::array<double, 4> initial_pose{{poi_.x, poi_.y, poi_.z}};
+  std::array<double, 4> initial_pose{{poi_.x, poi_.y, search_area_height_}};
+  // float height_step = search_area_height_ / (seek_points.size() - 1);
   float yaw_step = M_PI_4;
   float yaw = 0.0;
   float max_yaw = 1.9*M_PI;
@@ -86,7 +89,9 @@ void GoalSeeker::start()
   {
     seek_points[i][0] = poi_.x;
     seek_points[i][1] = poi_.y;
-    seek_points[i][2] = initial_pose[2] - i*height_step;
+    // seek_points[i][2] = initial_pose[2] - i*height_step;
+    // seek_points[i][2] = poi_.z;
+    seek_points[i][2] = search_area_height_;
     yaw = yaw + yaw_step;
     if (yaw > max_yaw) {
       yaw = 0.0;
@@ -148,6 +153,7 @@ void GoalSeeker::run()
       double distance = sqrt(pow(poses_[order_index_].position.x - odometry_.pose.pose.position.x, 2) +
                              pow(poses_[order_index_].position.y - odometry_.pose.pose.position.y, 2) +
                              pow(poses_[order_index_].position.z - odometry_.pose.pose.position.z, 2));
+      // std::cout << "Distance: " << distance << std::endl;
       if (distance < next_point_reached_dist_)
       {
         if (checkOrientationReached(ref_angle_))
@@ -177,7 +183,7 @@ void GoalSeeker::run()
       if (findYawOfInterest(yaw)){
         ref_angle_ = yaw;
       }
-      // ROS_INFO("Sending waypoint %f, %f, %f. Angle %f", poses_[order_index_].position.x, poses_[order_index_].position.y, poses_[order_index_].position.z, ref_angle_);
+      ROS_INFO("Sending waypoint %f, %f, %f. Angle %f", poses_[order_index_].position.x, poses_[order_index_].position.y, poses_[order_index_].position.z, ref_angle_);
       auto msg = generateWaypointMsg(poses_[order_index_], ref_angle_);
       waypoint_pub_.publish(msg);
       // pose_pub_.publish(generatePoseStampedMsg(poses_[order_index_], ref_angle_));
@@ -219,6 +225,8 @@ bool GoalSeeker::checkOrientationReached(const float _angle)
     yaw = yaw - 2*M_PI;
   }
 
+  // std::cout << "RefAngle: " << _angle << " Yaw: " << yaw << std::endl;
+
   if (fabs(_angle - yaw) < next_point_reached_yaw_)
   {
     return true;
@@ -255,6 +263,7 @@ bool GoalSeeker::controlNodeSrv(std_srvs::SetBool::Request &_request, std_srvs::
 
 bool GoalSeeker::findYawOfInterest(float &_yoi)
 {
+  return false;
   cv::Point2i center_cell(0,0);
   int max_radious = 0;
   try {
