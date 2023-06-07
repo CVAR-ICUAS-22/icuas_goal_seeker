@@ -158,7 +158,7 @@ void GoalSeeker::run()
       // std::cout << "Distance: " << distance << std::endl;
       if (distance < next_point_reached_dist_)
       {
-        std::cout << "Distance reached" << std::endl;
+        // std::cout << "Distance reached" << std::endl;
         if (checkOrientationReached(ref_angle_))
         {
           waypoint_sent_ = false;
@@ -186,7 +186,7 @@ void GoalSeeker::run()
       if (findYawOfInterest(yaw)){
         ref_angle_ = yaw;
       }
-      ROS_INFO("Sending waypoint %f, %f, %f. Angle %f", poses_[order_index_].position.x, poses_[order_index_].position.y, poses_[order_index_].position.z, ref_angle_);
+      // ROS_INFO("Sending waypoint %f, %f, %f. Angle %f", poses_[order_index_].position.x, poses_[order_index_].position.y, poses_[order_index_].position.z, ref_angle_);
       auto msg = generateWaypointMsg(poses_[order_index_], ref_angle_);
       waypoint_pub_.publish(msg);
       // pose_pub_.publish(generatePoseStampedMsg(poses_[order_index_], ref_angle_));
@@ -228,7 +228,7 @@ bool GoalSeeker::checkOrientationReached(const float _angle)
     yaw = yaw - 2*M_PI;
   }
 
-  std::cout << "RefAngle: " << _angle << " Yaw: " << yaw << std::endl;
+  // std::cout << "RefAngle: " << _angle << " Yaw: " << yaw << std::endl;
 
   if (fabs(_angle - yaw) < next_point_reached_yaw_)
   {
