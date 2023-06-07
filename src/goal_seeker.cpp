@@ -153,9 +153,12 @@ void GoalSeeker::run()
       double distance = sqrt(pow(poses_[order_index_].position.x - odometry_.pose.pose.position.x, 2) +
                              pow(poses_[order_index_].position.y - odometry_.pose.pose.position.y, 2) +
                              pow(poses_[order_index_].position.z - odometry_.pose.pose.position.z, 2));
+      auto msg = generateWaypointMsg(poses_[order_index_], ref_angle_);
+      waypoint_pub_.publish(msg);
       // std::cout << "Distance: " << distance << std::endl;
       if (distance < next_point_reached_dist_)
       {
+        std::cout << "Distance reached" << std::endl;
         if (checkOrientationReached(ref_angle_))
         {
           waypoint_sent_ = false;
@@ -225,7 +228,7 @@ bool GoalSeeker::checkOrientationReached(const float _angle)
     yaw = yaw - 2*M_PI;
   }
 
-  // std::cout << "RefAngle: " << _angle << " Yaw: " << yaw << std::endl;
+  std::cout << "RefAngle: " << _angle << " Yaw: " << yaw << std::endl;
 
   if (fabs(_angle - yaw) < next_point_reached_yaw_)
   {
