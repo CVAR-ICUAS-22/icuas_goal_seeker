@@ -36,7 +36,7 @@
 #define RUN_DETECTION_TOPIC "/crack_detector/run"
 #define MAP_TOPIC "ego_map"
 #define PI 3.14159265
-#define N_POSES 8
+#define N_POSES 20
 
 class GoalSeeker
 {
@@ -79,6 +79,7 @@ public:
   float next_point_reached_dist_;
   float next_point_reached_yaw_;
   float end_inspection_tag_position_diff;
+  bool find_nearest_wall_ = false;
 
   float search_area_height_ = 5.0;
   float search_area_radious_ = 2.5;

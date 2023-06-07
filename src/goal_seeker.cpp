@@ -182,9 +182,11 @@ void GoalSeeker::run()
     else
     {
       ref_angle_ = poses_[order_index_].orientation.w;
-      float yaw = 0.0;
-      if (findYawOfInterest(yaw)){
-        ref_angle_ = yaw;
+      if (find_nearest_wall_) {
+        float yaw = 0.0;
+        if (findYawOfInterest(yaw)){
+          ref_angle_ = yaw;
+        }
       }
       // ROS_INFO("Sending waypoint %f, %f, %f. Angle %f", poses_[order_index_].position.x, poses_[order_index_].position.y, poses_[order_index_].position.z, ref_angle_);
       auto msg = generateWaypointMsg(poses_[order_index_], ref_angle_);
@@ -266,7 +268,7 @@ bool GoalSeeker::controlNodeSrv(std_srvs::SetBool::Request &_request, std_srvs::
 
 bool GoalSeeker::findYawOfInterest(float &_yoi)
 {
-  return false;
+  // return false;
   cv::Point2i center_cell(0,0);
   int max_radious = 0;
   try {
