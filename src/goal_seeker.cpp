@@ -114,6 +114,14 @@ void GoalSeeker::start()
 
   run_node_ = true;
   waypoint_sent_ = false;
+
+  runDetector(true); 
+}
+
+void GoalSeeker::runDetector(bool _run_node){
+  std_msgs::Bool msg;
+  msg.data = _run_node;
+  run_detection_pub_.publish(msg);
 }
 
 void GoalSeeker::stop()
@@ -129,6 +137,7 @@ void GoalSeeker::endSearch()
   has_ended_pub_.publish(msg);
   // run_node_ = false;
   ROS_INFO("End search");
+  runDetector(false);
 }
 
 void GoalSeeker::run()
@@ -143,59 +152,83 @@ void GoalSeeker::run()
     ROS_INFO_ONCE("Waiting for odometry...");
     return;
   }
+  
+  runDetector(true);
 
   // SEEK
-  if (!tag_pose_received_)
-  {
-    if (waypoint_sent_)
-    {
-      // double distance = sqrt(pow(poses_[order_index_].position.x - odometry_.pose.pose.position.x, 2) + pow(poses_[order_index_].position.y - odometry_.pose.pose.position.y, 2));
-      double distance = sqrt(pow(poses_[order_index_].position.x - odometry_.pose.pose.position.x, 2) +
-                             pow(poses_[order_index_].position.y - odometry_.pose.pose.position.y, 2) +
-                             pow(poses_[order_index_].position.z - odometry_.pose.pose.position.z, 2));
-      auto msg = generateWaypointMsg(poses_[order_index_], ref_angle_);
-      waypoint_pub_.publish(msg);
-      // std::cout << "Distance: " << distance << std::endl;
-      if (distance < next_point_reached_dist_)
-      {
-        // std::cout << "Distance reached" << std::endl;
-        if (checkOrientationReached(ref_angle_))
-        {
-          waypoint_sent_ = false;
-          order_index_ += modifier_;
-          // Continue searching backwards
-          // if (order_index_ == (poses_.size() - 1) || order_index_ == 0)
-          // {
-          //   modifier_ *= -1;
-          // }
-          // Finish searching backwards
-          // if (order_index_ == 0) {
-          // Finish searching forwards
-          // if (order_index_ == (poses_.size() - 1)) {
-          if (order_index_ == (poses_.size() - 1) || order_index_ == 0)
-          {
-              endSearch();
-          }
-        }
+  // if (tag_pose_received_)
+  // {
+  //   return;
+  // }
+
+  // Find near walls
+  if (find_nearest_wall_) {
+    // LIST OF YAW VISITED?
+    std::vector<float> yaws;
+    if (findYawsOfInterest(yaws)) {
+      for (float yaw : yaws) {
+        std::cout << "Yoi: " << yaw << std::endl;
+        // Insert yaws that are neither 
+        // in yaw_nearest_wall nor yaw_visited
+        near_walls_yaw_.insert(yaw);
       }
-    }
-    else
-    {
-      ref_angle_ = poses_[order_index_].orientation.w;
-      if (find_nearest_wall_) {
-        float yaw = 0.0;
-        if (findYawOfInterest(yaw)){
-          ref_angle_ = yaw;
-        }
-      }
-      // ROS_INFO("Sending waypoint %f, %f, %f. Angle %f", poses_[order_index_].position.x, poses_[order_index_].position.y, poses_[order_index_].position.z, ref_angle_);
-      auto msg = generateWaypointMsg(poses_[order_index_], ref_angle_);
-      waypoint_pub_.publish(msg);
-      // pose_pub_.publish(generatePoseStampedMsg(poses_[order_index_], ref_angle_));
-      waypoint_sent_ = true;
     }
   }
 
+  if (waypoint_sent_)
+  {
+    // double distance = sqrt(pow(poses_[order_index_].position.x - odometry_.pose.pose.position.x, 2) + pow(poses_[order_index_].position.y - odometry_.pose.pose.position.y, 2));
+    double distance = sqrt(pow(poses_[order_index_].position.x - odometry_.pose.pose.position.x, 2) +
+                           pow(poses_[order_index_].position.y - odometry_.pose.pose.position.y, 2) +
+                           pow(poses_[order_index_].position.z - odometry_.pose.pose.position.z, 2));
+    auto msg = generateWaypointMsg(poses_[order_index_], ref_angle_);
+    waypoint_pub_.publish(msg);
+    // std::cout << "Distance: " << distance << std::endl;
+    if (distance < next_point_reached_dist_)
+    {
+      // std::cout << "Distance reached" << std::endl;
+      if (checkOrientationReached(ref_angle_))
+      {
+        waypoint_sent_ = false;
+        order_index_ += modifier_;
+        // Continue searching backwards
+        // if (order_index_ == (poses_.size() - 1) || order_index_ == 0)
+        // {
+        //   modifier_ *= -1;
+        // }
+        // Finish searching backwards
+        // if (order_index_ == 0) {
+        // Finish searching forwards
+        // if (order_index_ == (poses_.size() - 1)) {
+        if (order_index_ == (poses_.size() - 1) || order_index_ == 0)
+        {
+            endSearch();
+        }
+      }
+    }
+  }
+  else
+  {
+    ref_angle_ = poses_[order_index_].orientation.w;
+    // NEAREST POINT APPROACH (ONE YAW) 
+    // if (find_nearest_wall_) {
+      // float yaw = 0.0;
+      // if (findYawOfInterest(yaw)){
+      //   ref_angle_ = yaw;
+      // }
+    // }
+    
+    // INSPECT SEVERAL YAWS
+    // ref_angle_ = next yaw not visited
+    // check if yaw_visited_
+    }
+    // ROS_INFO("Sending waypoint %f, %f, %f. Angle %f", poses_[order_index_].position.x, poses_[order_index_].position.y, poses_[order_index_].position.z, ref_angle_);
+    auto msg = generateWaypointMsg(poses_[order_index_], ref_angle_);
+    waypoint_pub_.publish(msg);
+    // pose_pub_.publish(generatePoseStampedMsg(poses_[order_index_], ref_angle_));
+    waypoint_sent_ = true;
+  }
+  
   // Check final condition and send has_ended
 
   // INSPECTION
@@ -264,6 +297,76 @@ bool GoalSeeker::controlNodeSrv(std_srvs::SetBool::Request &_request, std_srvs::
   }
 
   return true;
+}
+
+bool GoalSeeker::findYawsOfInterest(std::vector<float> &_yoi)
+// bool GoalSeeker::findYawOfInterest(float &_yoi)
+{
+  // return false;
+  cv::Point2i center_cell(0,0);
+  cv::Size map_size;
+  int max_radious = 0;
+  try {
+    map_size = map_.size();
+    max_radious = std::min(map_size.height, map_size.width);
+    center_cell.x = map_size.height / 2;
+    center_cell.y = map_size.width / 2;
+  }
+  catch (...) {
+    ROS_WARN("Map not received");
+  }
+
+  if (max_radious < 1) {
+    return false;
+  } 
+
+  int n_sectors = 16;
+  double sector_angle = 360.0 / n_sectors;
+
+  cv::Mat sectors = cv::Mat::zeros(map_size, map_.type());
+
+  for (int i = 0; i < n_sectors; i++) {
+    double init_angle = i * sector_angle;
+    double end_angle = (i + 1) * sector_angle;
+    double mid_yaw_angle = (i + 0.5) * sector_angle * PI/180;
+
+    cv::Mat mask = cv::Mat::zeros(map_size, CV_8UC1);
+    cv::ellipse(mask, cv::Point(center_cell.x, center_cell.y), 
+                cv::Size(max_radious, max_radious), 0, 
+                init_angle, end_angle, 
+                cv::Scalar(255), -1);
+    cv::Mat sector = map_ & mask;
+    int free_pixels = cv::countNonZero(mask);
+    int occupied_pixels = free_pixels - cv::countNonZero(sector);
+
+    std::cout << "Occ px: " << occupied_pixels << std::endl;
+
+    int occ_th = 5;
+    if (occupied_pixels > occ_th)
+    {
+      // std::cout << "Yaw " << mid_angle << std::endl; 
+      _yoi.emplace_back(mid_yaw_angle);
+    }
+
+    // DEBUG
+    // std::cout << "Image size: " << sector.size() << std::endl; 
+    // std::cout << "Sector " << i + 1 << ": " << occupied_pixels << std::endl; 
+    // std::cout << "Yaw " << mid_yaw_angle << std::endl; 
+    // cv::namedWindow("Map", cv::WINDOW_FREERATIO);
+    // cv::imshow("Map", map_);
+    // cv::namedWindow("Mask", cv::WINDOW_FREERATIO);
+    // cv::imshow("Mask", mask);
+    // cv::namedWindow("Sector", cv::WINDOW_FREERATIO);
+    // cv::imshow("Sector", sector);
+    // cv::waitKey(0);
+  }
+
+  if (_yoi.size() > 0) {
+    std::cout << "Size: " << _yoi.size() << std::endl;
+    return true;
+  }
+  return false;
+
 }
 
 bool GoalSeeker::findYawOfInterest(float &_yoi)
@@ -355,7 +458,15 @@ void GoalSeeker::mapCallback(const sensor_msgs::ImageConstPtr &_map)
   try
   {
     cv_ptr = cv_bridge::toCvCopy(_map, sensor_msgs::image_encodings::TYPE_8UC1);
-    map_ = cv_ptr->image;
+    cv::Mat original_map = cv_ptr->image;
+    cv::Mat filtered_map, eroded_map;
+    cv::Mat element = cv::getStructuringElement(cv::MORPH_CROSS, cv::Size(3, 3));
+    cv::dilate(original_map, eroded_map, element);
+    cv::erode(eroded_map, map_, element);
+
+    // cv::namedWindow("filtered", cv::WINDOW_FREERATIO);
+    // cv::imshow("filtered", filtered_map);
+    // cv::waitKey(1);
   }
   catch (cv_bridge::Exception &e)
   {

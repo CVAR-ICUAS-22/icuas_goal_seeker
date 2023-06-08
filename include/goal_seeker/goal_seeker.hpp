@@ -79,7 +79,7 @@ public:
   float next_point_reached_dist_;
   float next_point_reached_yaw_;
   float end_inspection_tag_position_diff;
-  bool find_nearest_wall_ = false;
+  bool find_nearest_wall_ = true;
 
   float search_area_height_ = 5.0;
   float search_area_radious_ = 2.5;
@@ -89,6 +89,8 @@ public:
   int modifier_;
   Eigen::Vector3d tag_position_;
   bool target_found_=false;
+  std::set<float> near_walls_yaw_;
+  std::set<float> yaw_visited_;
 
   bool checkOrientationReached(const float _angle);
   void odometryCallback(const nav_msgs::Odometry::ConstPtr &_msg);
@@ -101,7 +103,9 @@ public:
   void mapCallback(const sensor_msgs::ImageConstPtr &_map);
   bool cellIsOccupied(const cv::Point2i &_cell);
   bool findYawOfInterest(float &_yoi);
+  bool findYawsOfInterest(std::vector<float> &_yoi);
   float calculateYaw(cv::Point2i &_cell, cv::Point2i &_center);
+  void runDetector(bool _run_node);
 };
 
 trajectory_msgs::MultiDOFJointTrajectoryPoint generateWaypointMsg(const geometry_msgs::Pose &_poses, const float _yaw);
