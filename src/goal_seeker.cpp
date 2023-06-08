@@ -137,6 +137,7 @@ void GoalSeeker::endSearch() {
 
 void GoalSeeker::run() {
   if (!run_node_) {
+    runDetector(false);
     return;
   }
 
