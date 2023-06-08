@@ -36,7 +36,7 @@
 #define RUN_DETECTION_TOPIC "/crack_detector/run"
 #define MAP_TOPIC "ego_map"
 #define PI 3.14159265
-#define N_POSES 20
+#define N_POSES 10
 
 class GoalSeeker {
 public:
