@@ -27,14 +27,17 @@ GoalSeeker::GoalSeeker() : it_(nh_) {
   nh_.getParam("goal_seeker/seek_start", seek_start_);
   nh_.getParam("goal_seeker/next_point_reached_dist", next_point_reached_dist_);
   nh_.getParam("goal_seeker/next_point_reached_yaw", next_point_reached_yaw_);
+  nh_.getParam("goal_seeker/find_nearest_wall", find_nearest_wall_);
   // nh_.getParam("goal_seeker/inspection_distance", inspection_distance_);
   // nh_.getParam("goal_seeker/inspection_height", inspection_height_);
-
   ROS_INFO("Search radious: %.2f", search_area_radious_);
   ROS_INFO("Search height: %.2f", search_area_height_);
   ROS_INFO("Seek start: %s", seek_start_.c_str());
   ROS_INFO("Next point reached distance: %.2f", next_point_reached_dist_);
   ROS_INFO("Next point reached yaw: %.2f", next_point_reached_yaw_);
+  if (find_nearest_wall_) {
+    ROS_INFO("Finding nearest wall");
+  }
   // ROS_INFO("Inspection distance: %2f", inspection_distance_);
   // ROS_INFO("Inspection height: %.2f", inspection_height_);
 
@@ -213,7 +216,7 @@ void GoalSeeker::run() {
     // INSPECT SEVERAL YAWS
     // ref_angle_ = next yaw not visited
     // check if yaw_visited_
-  }
+    // }
   // ROS_INFO("Sending waypoint %f, %f, %f. Angle %f",
   // poses_[order_index_].position.x, poses_[order_index_].position.y,
   // poses_[order_index_].position.z, ref_angle_);
@@ -222,6 +225,7 @@ void GoalSeeker::run() {
   // pose_pub_.publish(generatePoseStampedMsg(poses_[order_index_],
   // ref_angle_));
   waypoint_sent_ = true;
+  }
 }
 
 // Check final condition and send has_ended

@@ -8,6 +8,7 @@
   <arg name="inspection_distance" default="4.0" />
   <arg name="inspection_height" default="2.0" />
   <arg name="end_inspection_tag_position_diff" default="0.005" />
+  <arg name="find_nearest_wall" default="false" />
   
   <arg name="namespace"/>
   <group ns="$(arg namespace)">
@@ -22,6 +23,7 @@
       <param name="inspection_distance" type="double" value="$(arg inspection_distance)" />
       <param name="inspection_height" type="double" value="$(arg inspection_height)" />
       <param name="end_inspection_tag_position_diff" type="double" value="$(arg end_inspection_tag_position_diff)" />
+      <param name="find_nearest_wall" type="bool" value="$(arg find_nearest_wall)"/>
 
       <!-- <remap from="target_position" to="$(arg ar_tag_topic)"/> -->
     </node>
