@@ -1,30 +1,30 @@
 #ifndef GOAL_SEEKER_HPP_
 #define GOAL_SEEKER_HPP_
 
-#include <ros/ros.h>
+#include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
 #include <opencv2/opencv.hpp>
-#include <cv_bridge/cv_bridge.h>
+#include <ros/ros.h>
 
+#include "image_transport/subscriber.h"
 #include "ros/publisher.h"
 #include "ros/service_server.h"
-#include "image_transport/subscriber.h"
 #include <opencv2/core/types.hpp>
 
+#include "geometry_msgs/Point.h"
+#include "sensor_msgs/Image.h"
+#include <nav_msgs/Odometry.h>
+#include <path_planner/setGoalPoint.h>
 #include <std_msgs/Bool.h>
 #include <std_srvs/SetBool.h>
-#include <nav_msgs/Odometry.h>
-#include "sensor_msgs/Image.h"
-#include "geometry_msgs/Point.h"
-#include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <path_planner/setGoalPoint.h>
+#include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
 
 #include <Eigen/Dense>
-#include <cmath>
 #include <array>
-#include <thread>
 #include <chrono>
+#include <cmath>
+#include <thread>
 
 #define GOAL_TOPIC "goal_position"
 #define WAYPOINT_TOPIC "position_hold/trajectory"
@@ -38,8 +38,7 @@
 #define PI 3.14159265
 #define N_POSES 20
 
-class GoalSeeker
-{
+class GoalSeeker {
 public:
   GoalSeeker();
   ~GoalSeeker();
@@ -79,7 +78,7 @@ public:
   float next_point_reached_dist_;
   float next_point_reached_yaw_;
   float end_inspection_tag_position_diff;
-  bool find_nearest_wall_ = true;
+  bool find_nearest_wall_ = false;
 
   float search_area_height_ = 5.0;
   float search_area_radious_ = 2.5;
@@ -88,14 +87,16 @@ public:
   int order_index_;
   int modifier_;
   Eigen::Vector3d tag_position_;
-  bool target_found_=false;
+  bool target_found_ = false;
   std::set<float> near_walls_yaw_;
   std::set<float> yaw_visited_;
 
   bool checkOrientationReached(const float _angle);
   void odometryCallback(const nav_msgs::Odometry::ConstPtr &_msg);
-  // void tagPoseCallback(const ar_track_alvar_msgs::AlvarMarkers::ConstPtr &_msg);
-  bool controlNodeSrv(std_srvs::SetBool::Request &_request, std_srvs::SetBool::Response &_response);
+  // void tagPoseCallback(const ar_track_alvar_msgs::AlvarMarkers::ConstPtr
+  // &_msg);
+  bool controlNodeSrv(std_srvs::SetBool::Request &_request,
+                      std_srvs::SetBool::Response &_response);
   bool filterTagPosition(const Eigen::Vector3d &_tag_position);
   bool setGoalSrv(path_planner::setGoalPoint::Request &_request,
                   path_planner::setGoalPoint::Response &_response);
@@ -108,10 +109,12 @@ public:
   void runDetector(bool _run_node);
 };
 
-trajectory_msgs::MultiDOFJointTrajectoryPoint generateWaypointMsg(const geometry_msgs::Pose &_poses, const float _yaw);
-geometry_msgs::PoseStamped generateGoalPoseMsg(const Eigen::Vector3d _goal_position);
-geometry_msgs::PoseStamped generatePoseStampedMsg(const geometry_msgs::Pose _waypoint,
-                                                  const float _yaw);
+trajectory_msgs::MultiDOFJointTrajectoryPoint
+generateWaypointMsg(const geometry_msgs::Pose &_poses, const float _yaw);
+geometry_msgs::PoseStamped
+generateGoalPoseMsg(const Eigen::Vector3d _goal_position);
+geometry_msgs::PoseStamped
+generatePoseStampedMsg(const geometry_msgs::Pose _waypoint, const float _yaw);
 
 Eigen::Vector3d identifyTagOrientation(const Eigen::Vector3d tag_position_);
 float identifySeekYaw(const Eigen::Vector3d tag_position_);
